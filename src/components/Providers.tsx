@@ -10,7 +10,7 @@ import { type ThemeProviderProps } from "next-themes";
 const Providers = ({ children, ...props }: ThemeProviderProps) => {
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <SessionProvider>{children}</SessionProvider>;
+      <SessionProvider>{children}</SessionProvider>
     </ThemeProvider>
   );
 };
