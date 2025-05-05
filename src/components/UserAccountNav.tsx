@@ -5,7 +5,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@radix-ui/react-dropdown-menu";
+} from "@/components/ui/dropdown-menu";
 import { User } from "next-auth";
 import { signOut } from "next-auth/react";
 import Link from "next/link";
@@ -30,7 +30,7 @@ const UserAccountNav = ({ user }: Props) => {
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" className="w-56 bg-white">
-        <div className="flex items-center justify-start gap-2 mb-5">
+        <div className="flex items-center justify-start gap-2 p-2">
           <div className="flex flex-col space-y-1 leading-none">
             {user.name && <p className="font-medium">{user.name}</p>}
             {user.email && (
@@ -52,7 +52,7 @@ const UserAccountNav = ({ user }: Props) => {
             e.preventDefault();
             signOut().catch(console.error);
           }}
-          className="text-red-600 cursor-pointer mt-3"
+          className="text-red-600 cursor-pointer"
         >
           <div className="flex items-center gap-2">
             <span>Sign out</span>
