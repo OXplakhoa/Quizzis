@@ -8,7 +8,7 @@ import {
   CardTitle,
 } from "./ui/card";
 import { useForm } from "react-hook-form";
-import { quizSchema } from "@/schemas/form/quiz";
+import { quizSchema } from "@/schemas/form/quizSchema";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";

@@ -1,6 +1,6 @@
 import { strict_output } from "@/lib/cohere";
 import { getAuthSession } from "@/lib/nextauth";
-import { quizSchema } from "@/schemas/form/quiz";
+import { quizSchema } from "@/schemas/form/quizSchema";
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 
