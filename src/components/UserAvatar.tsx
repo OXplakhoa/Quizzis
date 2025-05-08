@@ -19,6 +19,7 @@ const UserAvatar = ({ user }: Props) => {
         referrerPolicy="no-referrer"
         className="object-cover rounded-full"
         sizes="100%"
+        priority
       />
     </div>
   ) : (

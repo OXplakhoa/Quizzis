@@ -1,11 +1,10 @@
 // /api/game
-
+import { generateQuestions } from "@/lib/questionGenerator";
 import { prisma } from "@/lib/db";
 import { getAuthSession } from "@/lib/nextauth";
 import { quizSchema } from "@/schemas/form/quizSchema";
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
-import axios from "axios";
 
 export const POST = async (req: Request, res: Response) => {
   try {
@@ -30,11 +29,7 @@ export const POST = async (req: Request, res: Response) => {
         topic,
       },
     });
-    const { data } = await axios.post(`${process.env.API_URL}/api/questions`, {
-      amount,
-      topic,
-      type,
-    });
+    const questions = await generateQuestions(amount, topic, type);
     if (type === "mcq") {
       type mcqQuestion = {
         question: string;
@@ -43,7 +38,7 @@ export const POST = async (req: Request, res: Response) => {
         options2: string;
         options3: string;
       };
-      let manyData = data.questions.map((question: mcqQuestion) => {
+      let manyData = questions.map((question: mcqQuestion) => {
         let options = [
           question.answer,
           question.options1,
@@ -67,7 +62,7 @@ export const POST = async (req: Request, res: Response) => {
         question: string;
         answer: string;
       };
-      let manyData = data.questions.map((question: OpenQuestion) => {
+      let manyData = questions.map((question: OpenQuestion) => {
         return {
           question: question.question,
           answer: question.answer,
