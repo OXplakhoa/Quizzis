@@ -18,6 +18,7 @@ const UserAvatar = ({ user }: Props) => {
         alt="Profile Picture"
         referrerPolicy="no-referrer"
         className="object-cover rounded-full"
+        sizes="100%"
       />
     </div>
   ) : (

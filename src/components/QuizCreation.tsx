@@ -24,12 +24,22 @@ import {
 import { Input } from "@/components/ui/input";
 import { BookOpen, CopyCheck } from "lucide-react";
 import { Separator } from "./ui/separator";
+import { useMutation } from "@tanstack/react-query";
+import axios from "axios";
+import { useRouter } from "next/navigation";
 
 type Props = {};
 
 type Input = z.infer<typeof quizSchema>;
 
 const QuizCreation = (props: Props) => {
+  const router = useRouter();
+  const { mutate: getQuestions, isPending } = useMutation({
+    mutationFn: async ({ amount, topic, type }: Input) => {
+      const res = await axios.post("/api/game", { amount, topic, type });
+      return res.data;
+    },
+  });
   const form = useForm<Input>({
     resolver: zodResolver(quizSchema),
     defaultValues: {
@@ -40,9 +50,24 @@ const QuizCreation = (props: Props) => {
   });
 
   const onSubmit = (input: Input) => {
-    alert(JSON.stringify(input, null, 2));
+    getQuestions(
+      {
+        amount: input.amount,
+        topic: input.topic,
+        type: input.type,
+      },
+      {
+        onSuccess: ({ gameId }) => {
+          if (form.getValues("type") === "mcq") {
+            router.push(`/play/mcq/${gameId}`);
+          } else {
+            router.push(`/play/open-ended/${gameId}`);
+          }
+        },
+      }
+    );
   };
-  form.watch("type");
+  form.watch();
   return (
     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
       <Card className="w-[300px]">
@@ -95,7 +120,7 @@ const QuizCreation = (props: Props) => {
               />
               <div className="flex justify-between">
                 <Button
-                type="button"
+                  type="button"
                   onClick={() => form.setValue("type", "mcq")}
                   className="w-1/2 rounded-none rounded-l-lg"
                   variant={
@@ -106,7 +131,7 @@ const QuizCreation = (props: Props) => {
                 </Button>
                 <Separator orientation="vertical" />
                 <Button
-                type="button"
+                  type="button"
                   onClick={() => form.setValue("type", "open_ended")}
                   className="w-1/2 rounded-none rounded-r-lg"
                   variant={
@@ -119,7 +144,9 @@ const QuizCreation = (props: Props) => {
                   Tự luận
                 </Button>
               </div>
-              <Button type="submit">Submit</Button>
+              <Button disabled={isPending} type="submit">
+                Submit
+              </Button>
             </form>
           </Form>
         </CardContent>
