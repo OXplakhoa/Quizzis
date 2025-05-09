@@ -4,7 +4,7 @@ import { Inter } from "next/font/google";
 import { cn } from "@/lib/utils";
 import Navbar from "@/components/Navbar";
 import Providers from "@/components/Providers";
-
+import { Toaster } from "@/components/ui/sonner";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
@@ -19,10 +19,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body suppressHydrationWarning className={cn(inter.className, "antialiased min-h-screen")}>
+      <body
+        suppressHydrationWarning
+        className={cn(inter.className, "antialiased min-h-screen")}
+      >
         <Providers>
           <Navbar />
           <main className="pt-16">{children}</main>
+          <Toaster />
         </Providers>
       </body>
     </html>
