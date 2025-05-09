@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getAuthSession } from "@/lib/nextauth";
 import { redirect } from "next/navigation";
 import React from "react";
+import GameLayout from "@/components/play/GameLayout";
 
 type Props = {
   params: {
@@ -25,7 +26,6 @@ const MCQPage = async ({ params: { gameId } }: Props) => {
           id: true,
           question: true,
           options: true,
-          
         },
       },
     },
@@ -33,7 +33,12 @@ const MCQPage = async ({ params: { gameId } }: Props) => {
   if(!game || game.gameType !== "mcq"){
     return redirect("/quiz")
   }
-  return  <MCQ game={game}/>
+
+  return (
+    <GameLayout game={game}>
+      <MCQ game={game} />
+    </GameLayout>
+  );
 };
 
 export default MCQPage;
