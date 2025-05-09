@@ -1,9 +1,8 @@
-import MCQ from "@/components/MCQ";
 import { prisma } from "@/lib/db";
 import { getAuthSession } from "@/lib/nextauth";
 import { redirect } from "next/navigation";
 import React from "react";
-import GameLayout from "@/components/play/GameLayout";
+import GameWrapper from "@/components/play/GameWrapper";
 
 type Props = {
   params: {
@@ -34,11 +33,7 @@ const MCQPage = async ({ params: { gameId } }: Props) => {
     return redirect("/quiz")
   }
 
-  return (
-    <GameLayout game={game}>
-      <MCQ game={game} />
-    </GameLayout>
-  );
+  return <GameWrapper game={game} />;
 };
 
 export default MCQPage;
