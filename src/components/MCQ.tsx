@@ -1,6 +1,6 @@
 "use client";
 import { Game, Question } from "@prisma/client";
-import { ChevronRight, Timer } from "lucide-react";
+import { ChevronRight, Loader2, Timer } from "lucide-react";
 import React from "react";
 import { Card, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
@@ -49,7 +49,7 @@ const MCQ = ({ game }: Props) => {
       toast.error("Vui lòng chọn một đáp án!");
       return;
     }
-    
+
     checkAnswer(undefined, {
       onSuccess: ({ isCorrect }) => {
         if (isCorrect) {
@@ -76,7 +76,37 @@ const MCQ = ({ game }: Props) => {
         toast.error(error.message || "Có lỗi xảy ra!");
       },
     });
-  }, [checkAnswer, selectedChoice, options, currentQuestion]);
+  }, [checkAnswer, selectedChoice]);
+
+  React.useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (isChecking) return;
+
+      switch (event.key) {
+        case "1":
+        case "2":
+        case "3":
+        case "4":
+          const index = parseInt(event.key) - 1;
+          if (index >= 0 && index < options.length) {
+            setSelectedChoice(index);
+          }
+          break;
+        case "Enter":
+          if (selectedChoice !== null) {
+            handleNext();
+          }
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [selectedChoice, isChecking, options.length, handleNext]);
 
   if (!currentQuestion) {
     return <div>Bài luyện thi đã hoàn tất!</div>;
@@ -87,12 +117,12 @@ const MCQ = ({ game }: Props) => {
       <div className="flex flex-row justify-between">
         <div className="flex flex-col">
           <p>
-            <span className="text-slate-400 mr-2">Chủ đề:</span>
+            <span className="text-slate-800 mr-2">Chủ đề:</span>
             <span className="px-2 py-1 text-white rounded-md bg-slate-800">
               {game.topic}
             </span>
           </p>
-          <div className="flex self-start mt-3 text-slate-400">
+          <div className="flex self-start mt-3 text-slate-800">
             <Timer className="mr-2" />
             <span>00:00</span>
           </div>
@@ -107,7 +137,7 @@ const MCQ = ({ game }: Props) => {
               {game.questions.length}
             </div>
           </CardTitle>
-          <CardDescription className="flex-grow text-lg">
+          <CardDescription className="flex-grow text-lg text-slate-800 font-bold">
             {currentQuestion.question}
           </CardDescription>
         </CardHeader>
@@ -129,11 +159,12 @@ const MCQ = ({ game }: Props) => {
             </div>
           </Button>
         ))}
-        <Button 
-          onClick={handleNext} 
+        <Button
+          onClick={handleNext}
           className="mt-2"
           disabled={isChecking || selectedChoice === null}
         >
+          {isChecking && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
           Next <ChevronRight className="w-4 h-4 ml-2" />
         </Button>
       </div>

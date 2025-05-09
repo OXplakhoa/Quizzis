@@ -22,7 +22,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { BookOpen, CopyCheck } from "lucide-react";
+import { BookOpen, CopyCheck, Loader2 } from "lucide-react";
 import { Separator } from "./ui/separator";
 import { useMutation } from "@tanstack/react-query";
 import axios from "axios";
@@ -145,6 +145,7 @@ const QuizCreation = (props: Props) => {
                 </Button>
               </div>
               <Button disabled={isPending} type="submit">
+                {isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 Submit
               </Button>
             </form>
