@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { checkAnswerSchema } from "@/schemas/form/quizSchema";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { scoreAnswer } from "@/lib/scoreAnswer";
 
 export const POST = async (req: Request, res: Response) => {
   try {
@@ -26,6 +27,7 @@ export const POST = async (req: Request, res: Response) => {
         userAnswer,
       },
     });
+
     if (question.questionType === "mcq") {
       const isCorrect =
         question.answer.toLowerCase().trim() ===
@@ -44,6 +46,28 @@ export const POST = async (req: Request, res: Response) => {
           status: 200,
         }
       );
+    } else if (question.questionType === "open_ended") {
+      const { score, explanation } = await scoreAnswer(userAnswer, question.answer);
+      const isCorrect = score >= 7; // Consider answers with 70% or higher similarity as correct
+      
+      await prisma.question.update({
+        where: { id: questionId },
+        data: {
+          isCorrect,
+          percentageCorrect: score * 10, // Store the percentage (0-100)
+        },
+      });
+
+      return NextResponse.json(
+        {
+          isCorrect,
+          score,
+          explanation,
+        },
+        {
+          status: 200,
+        }
+      );
     }
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -56,5 +80,13 @@ export const POST = async (req: Request, res: Response) => {
         }
       );
     }
+    return NextResponse.json(
+      {
+        error: "Internal server error",
+      },
+      {
+        status: 500,
+      }
+    );
   }
 };
