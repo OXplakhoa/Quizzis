@@ -25,6 +25,7 @@ const MCQPage = async ({ params: { gameId } }: Props) => {
           id: true,
           question: true,
           options: true,
+          answer: true,
         },
       },
     },

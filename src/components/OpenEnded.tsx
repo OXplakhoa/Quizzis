@@ -5,7 +5,6 @@ import React from "react";
 import { differenceInSeconds } from "date-fns";
 import { Card, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Button, buttonVariants } from "./ui/button";
-import MCQCounter from "./MCQCounter";
 import { useMutation } from "@tanstack/react-query";
 import { z } from "zod";
 import { checkAnswerSchema } from "@/schemas/form/quizSchema";
@@ -14,32 +13,44 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { cn, formatMMSS } from "@/lib/utils";
 import { Textarea } from "./ui/textarea";
+import OpenEndedPercentage from "./OpenEndedPercentage";
+import * as stringSimilarity from 'string-similarity';
+import { QuizCompletion } from "./quiz/QuizCompletion";
 
 type Props = {
   game: Game & { questions: Pick<Question, "id" | "question" | "answer">[] };
   onPointsUpdate: (points: number) => void;
+  onQuestionIndexUpdate: (index: number) => void;
 };
 
-const OpenEnded = ({ game, onPointsUpdate }: Props) => {
+const OpenEnded = ({ game, onPointsUpdate, onQuestionIndexUpdate }: Props) => {
   const [questionIdx, setQuestionIdx] = React.useState(0);
   const [answer, setAnswer] = React.useState("");
-  const [correctAnswers, setCorrectAnswers] = React.useState<number>(0);
-  const [wrongAnswers, setWrongAnswers] = React.useState<number>(0);
   const [points, setPoints] = React.useState<number>(0);
   const [now, setNow] = React.useState(new Date());
   const [timeStarted] = React.useState(() => new Date());
   const [showSampleAnswer, setShowSampleAnswer] = React.useState(false);
+  const [similarity, setSimilarity] = React.useState<number>(0);
+  const [similarityScores, setSimilarityScores] = React.useState<number[]>([]);
+  const [isCompleted, setIsCompleted] = React.useState(false);
+  const [answeredQuestions, setAnsweredQuestions] = React.useState<number>(0);
 
   const currentQuestion = React.useMemo(() => {
     return game.questions[questionIdx];
   }, [questionIdx, game.questions]);
 
   React.useEffect(() => {
+    onQuestionIndexUpdate(questionIdx);
+  }, [questionIdx, onQuestionIndexUpdate]);
+
+  React.useEffect(() => {
+    if (isCompleted) return;
+    
     const interval = setInterval(() => {
       setNow(new Date());
     }, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isCompleted]);
 
   const { mutate: checkAnswer, isPending: isChecking } = useMutation({
     mutationFn: async () => {
@@ -54,29 +65,35 @@ const OpenEnded = ({ game, onPointsUpdate }: Props) => {
       return response.data;
     },
     onSuccess: ({ isCorrect }) => {
-      if (isCorrect) {
-        toast.success("Đúng rồi!", {
-          style: {
-            background: "green",
-            color: "white",
-          },
-          description: "Chúc mừng bạn đã làm đúng!",
-        });
-        setCorrectAnswers((prev) => prev + 1);
-        const newPoints = points + 10;
-        setPoints(newPoints);
-        onPointsUpdate(newPoints);
-      } else {
-        toast.error("Sai rồi!", {
-          style: {
-            background: "red",
-            color: "white",
-          },
-          description: "Xin bạn hãy cố gắng hơn nữa!",
-        });
-        setWrongAnswers((prev) => prev + 1);
+      const similarityScore = stringSimilarity.compareTwoStrings(
+        answer.toLowerCase(),
+        currentQuestion.answer.toLowerCase()
+      );
+      setSimilarity(similarityScore);
+      
+      const pointsEarned = similarityScore * 10;
+      const newPoints = points + pointsEarned;
+      setPoints(newPoints);
+      onPointsUpdate(newPoints);
+
+      // Update similarity scores array and answered questions count
+      const newSimilarityScores = [...similarityScores];
+      newSimilarityScores[questionIdx] = similarityScore;
+      setSimilarityScores(newSimilarityScores);
+      setAnsweredQuestions(prev => prev + 1);
+
+      toast.success(`Bạn có ${Math.round(similarityScore * 100)}% điểm tương đồng với câu trả lời!`, {
+        style: {
+          background: "green",
+          color: "white",
+        },
+      });
+
+      const nextQuestionIdx = questionIdx + 1;
+      if (nextQuestionIdx >= game.questions.length) {
+        setIsCompleted(true);
       }
-      setQuestionIdx((prev) => prev + 1);
+      setQuestionIdx(nextQuestionIdx);
       setAnswer("");
       setShowSampleAnswer(false);
     },
@@ -113,15 +130,14 @@ const OpenEnded = ({ game, onPointsUpdate }: Props) => {
 
   if (!currentQuestion) {
     return (
-      <div className="absolute flex flex-col top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-        <div className="px-4 mt-2 font-semibold text-white bg-green-500 rounded-md whitespace-nowrap">
-          You completed in {formatMMSS(differenceInSeconds(now, timeStarted))}
-        </div>
-        <Link href={`/statistics/${game.id}`} className={cn(buttonVariants(), "mt-2")}>
-          View Statistic
-          <BarChart className="w-4 h-4 ml-2" />
-        </Link>
-      </div>
+      <QuizCompletion
+        gameId={game.id}
+        timeStarted={timeStarted}
+        now={now}
+        isOpenEnded={true}
+        points={points}
+        totalPoints={game.questions.length * 10}
+      />
     );
   }
 
@@ -140,9 +156,9 @@ const OpenEnded = ({ game, onPointsUpdate }: Props) => {
             {formatMMSS(differenceInSeconds(now, timeStarted))}
           </div>
         </div>
-        <MCQCounter
-          correctAnswers={correctAnswers}
-          wrongAnswers={wrongAnswers}
+        <OpenEndedPercentage 
+          userAnswer={answer}
+          correctAnswer={currentQuestion.answer}
         />
       </div>
       <Card className="w-full mt-4">

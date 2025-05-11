@@ -13,6 +13,7 @@ type Props = {
 
 const GameLayout = ({ game, children, points, totalPoints, currentQuestionIndex }: Props) => {
   const isCompleted = currentQuestionIndex >= game.questions.length;
+  const isOpenEnded = game.gameType === "open_ended";
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
@@ -25,6 +26,7 @@ const GameLayout = ({ game, children, points, totalPoints, currentQuestionIndex 
               points={points} 
               totalPoints={totalPoints} 
               isCompleted={isCompleted}
+              isOpenEnded={isOpenEnded}
             />
           </div>
 
