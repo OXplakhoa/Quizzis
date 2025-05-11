@@ -9,10 +9,25 @@ type Props = {
   points: number;
   totalPoints: number;
   currentQuestionIndex: number;
+  now: Date;
+  timeStarted: Date;
+  isCompleted: boolean;
+  finalTime?: string;
+  onCompletion: (time: string) => void;
 };
 
-const GameLayout = ({ game, children, points, totalPoints, currentQuestionIndex }: Props) => {
-  const isCompleted = currentQuestionIndex >= game.questions.length;
+const GameLayout = ({ 
+  game, 
+  children, 
+  points, 
+  totalPoints, 
+  currentQuestionIndex,
+  now,
+  timeStarted,
+  isCompleted,
+  finalTime,
+  onCompletion
+}: Props) => {
   const isOpenEnded = game.gameType === "open_ended";
 
   return (
@@ -27,6 +42,9 @@ const GameLayout = ({ game, children, points, totalPoints, currentQuestionIndex 
               totalPoints={totalPoints} 
               isCompleted={isCompleted}
               isOpenEnded={isOpenEnded}
+              now={now}
+              timeStarted={timeStarted}
+              finalTime={finalTime}
             />
           </div>
 

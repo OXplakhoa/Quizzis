@@ -11,6 +11,8 @@ type Props = {
   totalPoints?: number;
   isCompleted?: boolean;
   isOpenEnded?: boolean;
+  now: Date;
+  timeStarted: Date;
   finalTime?: string;
 };
 
@@ -20,28 +22,20 @@ const GameInfoSidebar = ({
   totalPoints = 0,
   isCompleted = false, 
   isOpenEnded = false,
+  now,
+  timeStarted,
   finalTime
 }: Props) => {
-  const [now, setNow] = useState(new Date());
   const [displayTime, setDisplayTime] = useState<string>("");
 
   useEffect(() => {
-    if (isCompleted) {
-      if (finalTime) {
-        setDisplayTime(finalTime);
-      } else {
-        setDisplayTime(formatMMSS(differenceInSeconds(now, game.timeStarted)));
-      }
+    if (isCompleted && finalTime) {
+      setDisplayTime(finalTime);
       return;
     }
-    
-    const interval = setInterval(() => {
-      const currentTime = new Date();
-      setNow(currentTime);
-      setDisplayTime(formatMMSS(differenceInSeconds(currentTime, game.timeStarted)));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [isCompleted, game.timeStarted, finalTime]);
+    setDisplayTime(formatMMSS(differenceInSeconds(now, timeStarted)));
+  }, [isCompleted, timeStarted, finalTime, now]);
+
   const displayPoints = isOpenEnded 
     ? `${points.toFixed(2)}/${totalPoints}`
     : `${points}/${totalPoints}`;

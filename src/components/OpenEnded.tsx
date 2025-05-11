@@ -21,18 +21,35 @@ type Props = {
   game: Game & { questions: Pick<Question, "id" | "question" | "answer">[] };
   onPointsUpdate: (points: number) => void;
   onQuestionIndexUpdate: (index: number) => void;
+  now: Date;
+  isCompleted: boolean;
+  onCompletion: (time: string) => void;
 };
 
-const OpenEnded = ({ game, onPointsUpdate, onQuestionIndexUpdate }: Props) => {
+const OpenEnded = ({ 
+  game, 
+  onPointsUpdate, 
+  onQuestionIndexUpdate,
+  now,
+  isCompleted,
+  onCompletion
+}: Props) => {
   const [questionIdx, setQuestionIdx] = React.useState(0);
   const [answer, setAnswer] = React.useState("");
   const [points, setPoints] = React.useState<number>(0);
-  const [now, setNow] = React.useState(new Date());
-  const [timeStarted] = React.useState(() => new Date());
+  const [timeStarted] = React.useState(() => {
+    // Only access localStorage on the client side
+    if (typeof window !== 'undefined') {
+      const persistedStartTime = localStorage.getItem(`game_${game.id}_startTime`);
+      if (persistedStartTime) {
+        return new Date(parseInt(persistedStartTime));
+      }
+    }
+    return new Date();
+  });
   const [showSampleAnswer, setShowSampleAnswer] = React.useState(false);
   const [similarity, setSimilarity] = React.useState<number>(0);
   const [similarityScores, setSimilarityScores] = React.useState<number[]>([]);
-  const [isCompleted, setIsCompleted] = React.useState(false);
   const [answeredQuestions, setAnsweredQuestions] = React.useState<number>(0);
 
   const currentQuestion = React.useMemo(() => {
@@ -42,15 +59,6 @@ const OpenEnded = ({ game, onPointsUpdate, onQuestionIndexUpdate }: Props) => {
   React.useEffect(() => {
     onQuestionIndexUpdate(questionIdx);
   }, [questionIdx, onQuestionIndexUpdate]);
-
-  React.useEffect(() => {
-    if (isCompleted) return;
-    
-    const interval = setInterval(() => {
-      setNow(new Date());
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [isCompleted]);
 
   const { mutate: checkAnswer, isPending: isChecking } = useMutation({
     mutationFn: async () => {
@@ -91,7 +99,8 @@ const OpenEnded = ({ game, onPointsUpdate, onQuestionIndexUpdate }: Props) => {
 
       const nextQuestionIdx = questionIdx + 1;
       if (nextQuestionIdx >= game.questions.length) {
-        setIsCompleted(true);
+        const finalTime = formatMMSS(differenceInSeconds(now, timeStarted));
+        onCompletion(finalTime);
       }
       setQuestionIdx(nextQuestionIdx);
       setAnswer("");
