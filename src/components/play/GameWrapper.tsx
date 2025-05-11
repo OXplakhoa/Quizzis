@@ -73,6 +73,8 @@ const GameWrapper = ({ game }: Props) => {
           game={game} 
           onPointsUpdate={handlePointsUpdate} 
           onQuestionIndexUpdate={handleQuestionIndexUpdate}
+          now={now}
+          onCompletion={handleCompletion}
         />
       ) : (
         <OpenEnded 
@@ -80,8 +82,6 @@ const GameWrapper = ({ game }: Props) => {
           onPointsUpdate={handlePointsUpdate}
           onQuestionIndexUpdate={handleQuestionIndexUpdate}
           now={now}
-          timeStarted={timeStarted}
-          isCompleted={isCompleted}
           onCompletion={handleCompletion}
         />
       )}

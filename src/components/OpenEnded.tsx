@@ -22,7 +22,6 @@ type Props = {
   onPointsUpdate: (points: number) => void;
   onQuestionIndexUpdate: (index: number) => void;
   now: Date;
-  isCompleted: boolean;
   onCompletion: (time: string) => void;
 };
 
@@ -31,7 +30,6 @@ const OpenEnded = ({
   onPointsUpdate, 
   onQuestionIndexUpdate,
   now,
-  isCompleted,
   onCompletion
 }: Props) => {
   const [questionIdx, setQuestionIdx] = React.useState(0);

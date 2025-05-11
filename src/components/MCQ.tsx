@@ -11,9 +11,21 @@ type Props = {
   game: Game & { questions: Pick<Question, "id" | "options" | "question">[] };
   onPointsUpdate: (points: number) => void;
   onQuestionIndexUpdate: (index: number) => void;
+  now: Date;
+  onCompletion: (time: string) => void;
 };
 
-const MCQ = ({ game, onPointsUpdate, onQuestionIndexUpdate }: Props) => {
+const MCQ = ({ game, onPointsUpdate, onQuestionIndexUpdate, now, onCompletion }: Props) => {
+  const [timeStarted] = React.useState(() => {
+    // Only access localStorage on the client side
+    if (typeof window !== 'undefined') {
+      const persistedStartTime = localStorage.getItem(`game_${game.id}_startTime`);
+      if (persistedStartTime) {
+        return new Date(parseInt(persistedStartTime));
+      }
+    }
+    return new Date();
+  });
   const {
     questionIdx,
     selectedChoice,
@@ -21,13 +33,14 @@ const MCQ = ({ game, onPointsUpdate, onQuestionIndexUpdate }: Props) => {
     correctAnswers,
     wrongAnswers,
     points,
-    now,
     isCompleted,
     currentQuestion,
     options,
     isChecking,
     handleNext,
-  } = useQuiz(game);
+  } = useQuiz(game, timeStarted, onCompletion);
+
+  
 
   useEffect(() => {
     onQuestionIndexUpdate(questionIdx);
@@ -71,7 +84,7 @@ const MCQ = ({ game, onPointsUpdate, onQuestionIndexUpdate }: Props) => {
     return (
       <QuizCompletion
         gameId={game.id}
-        timeStarted={game.timeStarted}
+        timeStarted={timeStarted}
         now={now}
       />
     );
@@ -81,7 +94,7 @@ const MCQ = ({ game, onPointsUpdate, onQuestionIndexUpdate }: Props) => {
     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 md:w-[80vw] max-w-4xl w-[90vw]">
       <QuizHeader
         topic={game.topic}
-        timeStarted={game.timeStarted}
+        timeStarted={timeStarted}
         now={now}
         correctAnswers={correctAnswers}
         wrongAnswers={wrongAnswers}

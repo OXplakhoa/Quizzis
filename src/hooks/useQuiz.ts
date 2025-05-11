@@ -5,8 +5,14 @@ import { z } from "zod";
 import { checkAnswerSchema } from "@/schemas/form/quizSchema";
 import { toast } from "sonner";
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { differenceInSeconds } from "date-fns";
+import { formatMMSS } from "@/lib/utils";
 
-export const useQuiz = (game: Game & { questions: Pick<Question, "id" | "options" | "question">[] }) => {
+export const useQuiz = (
+  game: Game & { questions: Pick<Question, "id" | "options" | "question">[] },
+  timeStarted: Date,
+  onCompletion: (time: string) => void
+) => {
   const [questionIdx, setQuestionIdx] = useState(0);
   const [selectedChoice, setSelectedChoice] = useState<number | null>(null);
   const [correctAnswers, setCorrectAnswers] = useState<number>(0);
@@ -75,6 +81,12 @@ export const useQuiz = (game: Game & { questions: Pick<Question, "id" | "options
       }
       setQuestionIdx((prev) => prev + 1);
       setSelectedChoice(null);
+      const nextQuestionIdx = questionIdx + 1;
+      if (nextQuestionIdx >= game.questions.length) {
+        const finalTime = formatMMSS(differenceInSeconds(now, timeStarted));
+        onCompletion(finalTime);
+      }
+      setQuestionIdx(nextQuestionIdx);
     },
     onError: (error) => {
       toast.error(error.message || "Có lỗi xảy ra!");
