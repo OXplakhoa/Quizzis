@@ -9,17 +9,20 @@ type Props = {
   game: Game;
   points: number;
   totalPoints: number;
+  isCompleted?: boolean;
 };
 
-const GameInfoSidebar = ({ game, points, totalPoints }: Props) => {
+const GameInfoSidebar = ({ game, points, totalPoints, isCompleted = false }: Props) => {
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
+    if (isCompleted) return;
+    
     const interval = setInterval(() => {
       setNow(new Date());
     }, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isCompleted]);
 
   return (
     <Card className="p-4 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
