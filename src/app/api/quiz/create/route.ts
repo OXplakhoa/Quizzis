@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { userQuizSchema } from "@/schemas/form/quizSchema";
 import { prisma } from "@/lib/db";
-// import { getServerSession } from "next-auth"; // Uncomment if using next-auth
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/nextauth";
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,10 +13,9 @@ export async function POST(req: NextRequest) {
     }
     const { title, topic, questions } = parsed.data;
 
-    // TODO: Replace with actual user ID from session
-    // const session = await getServerSession(authOptions);
-    // const userId = session?.user?.id;
-    const userId = "demo-user-id";
+    // Get user session
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -25,7 +25,6 @@ export async function POST(req: NextRequest) {
       data: {
         userId,
         createdBy: userId,
-        creator: { connect: { id: userId } },
         title,
         topic,
         gameType: "mcq",

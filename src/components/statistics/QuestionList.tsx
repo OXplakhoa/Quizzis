@@ -15,6 +15,9 @@ type Props = {
 };
 
 const QuestionList = ({ questions }: Props) => {
+  if (!questions || questions.length === 0) {
+    return <div>Không có câu hỏi nào để hiển thị.</div>;
+  }
   let gameType = questions[0].questionType;
   return (
     <Table className="mt-4">

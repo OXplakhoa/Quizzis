@@ -27,6 +27,7 @@ export const POST = async (req: Request, res: Response) => {
         timeStarted: new Date(),
         userId: session.user.id,
         topic,
+        title: topic,
       },
     });
     const questions = await generateQuestions(amount, topic, type);

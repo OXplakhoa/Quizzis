@@ -13,12 +13,13 @@ export const metadata = {
   title: "Ôn thi trắc nghiệm | Quizzis",
 };
 
-const Quiz = async ({searchParams}: Props) => {
+const Quiz = async ({ searchParams }: { searchParams: any }) => {
   const session = await getAuthSession();
   if (!session?.user) {
-    return redirect("/");
+    redirect("/");
   }
-  return <QuizCreation topic={searchParams.topic} />;
+  const params = typeof searchParams.then === "function" ? await searchParams : searchParams;
+  return <QuizCreation topic={params.topic ?? ""} />;
 };
 
 export default Quiz;

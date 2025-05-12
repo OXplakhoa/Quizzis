@@ -27,7 +27,10 @@ export const useQuiz = (
 
   const options = useMemo(() => {
     if (!currentQuestion?.options) return [];
-    return JSON.parse(currentQuestion.options as string) as string[];
+    if (typeof currentQuestion.options === "string") {
+      return JSON.parse(currentQuestion.options) as string[];
+    }
+    return currentQuestion.options as string[];
   }, [currentQuestion]);
 
   useEffect(() => {
