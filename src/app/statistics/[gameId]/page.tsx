@@ -1,4 +1,5 @@
 import AccuracyCard from "@/components/statistics/AccuracyCard";
+import QuestionList from "@/components/statistics/QuestionList";
 import ResultCard from "@/components/statistics/ResultCard";
 import TimetakenCard from "@/components/statistics/TimetakenCard";
 import { buttonVariants } from "@/components/ui/button";
@@ -73,7 +74,7 @@ const StatisticsPage = async ({ params, searchParams }: Props) => {
             timeStarted={timeStarted}
           />
         </div>
-        {/* <QuestionsList questions={game.questions} /> */}
+        <QuestionList questions={game.questions}/>
       </div>
     </>
   );
