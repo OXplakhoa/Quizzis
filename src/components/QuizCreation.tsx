@@ -29,11 +29,13 @@ import axios from "axios";
 import { useRouter } from "next/navigation";
 import LoadingQuestion from "./LoadingQuestion";
 
-type Props = {};
+type Props = {
+  topic?: string;
+};
 
 type Input = z.infer<typeof quizSchema>;
 
-const QuizCreation = (props: Props) => {
+const QuizCreation = ({topic}: Props) => {
   const router = useRouter();
   const [finished, setFinished] = useState(false);
   const [showLoader, setShowLoader] = useState(false);
@@ -47,7 +49,7 @@ const QuizCreation = (props: Props) => {
     resolver: zodResolver(quizSchema),
     defaultValues: {
       amount: 3,
-      topic: "",
+      topic: topic || "",
       type: "mcq",
     },
   });
