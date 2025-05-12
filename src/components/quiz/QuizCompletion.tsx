@@ -46,7 +46,10 @@ export const QuizCompletion = ({
           Điểm cuối cùng: {displayPoints}
         </div>
       )}
-      <Link href={`/statistics/${gameId}`} className={cn(buttonVariants(), "mt-2")}>
+      <Link 
+        href={`/statistics/${gameId}?now=${now.getTime()}&timeStarted=${timeStarted.getTime()}`} 
+        className={cn(buttonVariants(), "mt-2")}
+      >
         Xem thống kê
         <BarChart className="w-4 h-4 ml-2" />
       </Link>

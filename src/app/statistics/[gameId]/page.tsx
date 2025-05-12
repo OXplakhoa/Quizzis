@@ -13,13 +13,21 @@ type Props = {
   params: {
     gameId: string;
   };
+  searchParams: {
+    now?: string;
+    timeStarted?: string;
+  };
 };
 
-const StatisticsPage = async ({ params }: Props) => {
+const StatisticsPage = async ({ params, searchParams }: Props) => {
   const session = await getAuthSession();
   if (!session?.user) {
     return redirect("/");
   }
+
+  const now = searchParams.now ? new Date(parseInt(searchParams.now)) : new Date();
+  const timeStarted = searchParams.timeStarted ? new Date(parseInt(searchParams.timeStarted)) : new Date();
+
   const game = await prisma.game.findUnique({
     where: {
       id: params.gameId,
@@ -59,7 +67,11 @@ const StatisticsPage = async ({ params }: Props) => {
         <div className="grid gap-4 mt-4 md:grid-cols-7">
           <ResultCard accuracy={accuracy} />
           <AccuracyCard accuracy={accuracy} />
-          <TimetakenCard timeEnded={new Date()} timeStarted={new Date()}/>
+          <TimetakenCard 
+            gameId={params.gameId} 
+            now={now}
+            timeStarted={timeStarted}
+          />
         </div>
         {/* <QuestionsList questions={game.questions} /> */}
       </div>
