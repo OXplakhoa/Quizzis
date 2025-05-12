@@ -39,15 +39,15 @@ export const QuizCompletion = ({
   return (
     <div className="absolute flex flex-col top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
       <div className="px-4 mt-2 font-semibold text-white bg-green-500 rounded-md whitespace-nowrap">
-        You completed in {finalTime}
+        Bạn hoàn thành trong {finalTime}
       </div>
       {isOpenEnded && (
         <div className="px-4 mt-2 font-semibold text-white bg-blue-500 rounded-md whitespace-nowrap">
-          Final Score: {displayPoints}
+          Điểm cuối cùng: {displayPoints}
         </div>
       )}
       <Link href={`/statistics/${gameId}`} className={cn(buttonVariants(), "mt-2")}>
-        View Statistic
+        Xem thống kê
         <BarChart className="w-4 h-4 ml-2" />
       </Link>
     </div>
