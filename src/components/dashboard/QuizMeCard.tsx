@@ -3,6 +3,9 @@ import React, { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { BrainCircuit, ArrowLeft, FileText, Presentation, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
+import FileUpload from "../FileUpload";
+import axios from "axios";
+import { toast } from "sonner";
 
 type Props = {};
 
@@ -10,6 +13,8 @@ const QuizMeCard = (props: Props) => {
   const router = useRouter();
   const [showModal, setShowModal] = useState(false);
   const [showImportOptions, setShowImportOptions] = useState(false);
+  const [showFileUpload, setShowFileUpload] = useState(false);
+  const [fileType, setFileType] = useState<'pdf' | 'pptx'>('pdf');
   const [animatingOption, setAnimatingOption] = useState<string | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   
@@ -19,6 +24,7 @@ const QuizMeCard = (props: Props) => {
       if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
         setShowModal(false);
         setShowImportOptions(false);
+        setShowFileUpload(false);
       }
     };
 
@@ -30,6 +36,27 @@ const QuizMeCard = (props: Props) => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showModal]);
+
+  const handleFileUpload = async (file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const endpoint = fileType === 'pdf' ? '/api/quiz/parse-pdf' : '/api/quiz/parse-pptx';
+      const response = await axios.post(endpoint, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (response.data.quizId) {
+        router.push(`/quiz/create?quizId=${response.data.quizId}`);
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Failed to process file');
+    }
+  };
   
   // Handle navigation with animation
   const handleOptionClick = (route: string, optionName: string) => {
@@ -41,6 +68,11 @@ const QuizMeCard = (props: Props) => {
       setAnimatingOption(null);
       router.push(route);
     }, 500); // 500ms animation duration
+  };
+
+  const handleImportClick = (type: 'pdf' | 'pptx') => {
+    setFileType(type);
+    setShowFileUpload(true);
   };
   
   return (
@@ -63,7 +95,16 @@ const QuizMeCard = (props: Props) => {
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-white/20">
           <div className="bg-white rounded-lg p-6 w-full max-w-lg shadow-xl" ref={modalRef}>
-            {!showImportOptions ? (
+            {showFileUpload ? (
+              <FileUpload
+                fileType={fileType}
+                onUpload={handleFileUpload}
+                onClose={() => {
+                  setShowFileUpload(false);
+                  setShowImportOptions(true);
+                }}
+              />
+            ) : !showImportOptions ? (
               <>
                 <h2 className="text-xl font-bold mb-4">Tạo một bài Quiz mới</h2>
                 <div className="grid grid-cols-1 gap-4 mb-4">
@@ -142,7 +183,7 @@ const QuizMeCard = (props: Props) => {
                   <button 
                     className={`relative bg-blue-100 hover:bg-blue-200 rounded-lg p-4 flex items-center hover:cursor-pointer transition-all duration-200 overflow-hidden
                       ${animatingOption === 'pdf' ? 'scale-105 shadow-lg' : ''}`}
-                    onClick={() => handleOptionClick("/quiz/import?type=pdf", "pdf")}
+                    onClick={() => handleImportClick('pdf')}
                     disabled={animatingOption !== null}
                   >
                     <div className="bg-red-500 text-white p-2 rounded-full mr-3 z-10">
@@ -161,7 +202,7 @@ const QuizMeCard = (props: Props) => {
                   <button 
                     className={`relative bg-blue-100 hover:bg-blue-200 rounded-lg p-4 flex items-center hover:cursor-pointer transition-all duration-200 overflow-hidden
                       ${animatingOption === 'slides' ? 'scale-105 shadow-lg' : ''}`}
-                    onClick={() => handleOptionClick("/quiz/import?type=slides", "slides")}
+                    onClick={() => handleImportClick('pptx')}
                     disabled={animatingOption !== null}
                   >
                     <div className="bg-orange-500 text-white p-2 rounded-full mr-3 z-10">
@@ -184,6 +225,7 @@ const QuizMeCard = (props: Props) => {
               onClick={() => {
                 setShowModal(false);
                 setShowImportOptions(false);
+                setShowFileUpload(false);
               }}
               disabled={animatingOption !== null}
             >
