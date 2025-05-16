@@ -1,4 +1,5 @@
 import JoinRoomForm from "@/components/JoinRoomForm";
+import { Suspense } from "react";
 
 interface JoinRoomPageProps {
   params: {
@@ -11,11 +12,11 @@ export default function JoinRoomPage({ params }: JoinRoomPageProps) {
     <div className="container max-w-2xl mx-auto p-6">
       <div className="text-center space-y-6">
         <h1 className="text-3xl font-bold">Tham gia phòng</h1>
-        <p className="text-gray-500">
-          Nhập tên của bạn để bắt đầu
-        </p>
-        <JoinRoomForm />
+        <p className="text-gray-500">Nhập tên của bạn để bắt đầu</p>
+        <Suspense fallback={<div>Loading...</div>}>
+          <JoinRoomForm />
+        </Suspense>
       </div>
     </div>
   );
-} 
+}
