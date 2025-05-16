@@ -1,77 +1,91 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/nextauth";
-import { prisma } from "@/lib/db";
 import { userQuizSchema } from "@/schemas/form/quizSchema";
-import { strict_output } from "@/lib/cohere";
+import { z } from "zod";
+import mammoth from "mammoth";
+
+// Define regex patterns for parsing
+const titlePattern = /Title:\s*(.+)/i;
+const topicPattern = /Topic:\s*(.+)/i;
+const questionPattern = /(\d+)\.\s*(.+?)(?=\n\s*[A-D]\.|\n\s*Answer Key:|$)/g;
+const answerPattern = /([A-D])\.\s*(.+?)(?=\n\s*[A-D]\.|\n\s*Answer Key:|$)/g;
+const answerKeyPattern = /Answer Key:\s*([A-D])/i;
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const formData = await req.formData();
     const file = formData.get("file") as File;
     
     if (!file) {
-      return NextResponse.json({ error: "No file provided" }, { status: 400 });
+      return NextResponse.json(
+        { error: "No file provided" },
+        { status: 400 }
+      );
     }
 
-    // Convert file to text
-    const text = await file.text();
-    
-    // Use AI to generate questions from the text
-    const questions = await strict_output(
-      "You are a helpful AI that generates multiple-choice questions from presentation content. Each question must have one correct answer and three distinct incorrect options. The correct answer should only appear in the 'answer' field. Each field should contain a short sentence under 15 words. Return all questions in a JSON array.",
-      `Generate 5 multiple-choice questions from this presentation content: ${text}`,
-      {
-        question: "question",
-        answer: "correct answer (under 15 words)",
-        options1: "incorrect answer (under 15 words, different from answer)",
-        options2: "incorrect answer (under 15 words, different from answer)",
-        options3: "incorrect answer (under 15 words, different from answer)",
+    // Read file content
+    const buffer = await file.arrayBuffer();
+    const result = await mammoth.extractRawText({ buffer: Buffer.from(buffer) });
+    const text = result.value;
+
+    // Extract title
+    const titleMatch = text.match(titlePattern);
+    const title = titleMatch ? titleMatch[1].trim() : "";
+
+    // Extract topic
+    const topicMatch = text.match(topicPattern);
+    const topic = topicMatch ? topicMatch[1].trim() : "";
+
+    // Extract questions and answers
+    const questions: { question: string; answers: string[] }[] = [];
+    let questionMatch;
+    let currentQuestion: { question: string; answers: string[] } | null = null;
+
+    while ((questionMatch = questionPattern.exec(text)) !== null) {
+      if (currentQuestion) {
+        questions.push(currentQuestion);
       }
-    );
+      currentQuestion = {
+        question: questionMatch[2].trim(),
+        answers: []
+      };
+    }
 
-    // Format questions according to our schema
-    const formattedQuestions = questions.map((q: any) => ({
-      question: q.question,
-      choices: [q.answer, q.options1, q.options2, q.options3].sort(() => Math.random() - 0.5),
-      correctAnswer: 0, // Will be updated after sorting
-    }));
+    if (currentQuestion) {
+      questions.push(currentQuestion);
+    }
 
-    // Update correctAnswer index after sorting
-    formattedQuestions.forEach((q: any) => {
-      q.correctAnswer = q.choices.indexOf(q.choices.find((c: string) => c === q.answer));
-    });
+    // Extract answers for each question
+    let answerMatch;
+    while ((answerMatch = answerPattern.exec(text)) !== null) {
+      const answer = answerMatch[2].trim();
+      const questionIndex = Math.floor(questions.length * (answerMatch.index / text.length));
+      if (questionIndex < questions.length) {
+        questions[questionIndex].answers.push(answer);
+      }
+    }
 
-    // Create a temporary quiz in the database
-    const quiz = await prisma.game.create({
-      data: {
-        userId: session.user.id,
-        createdBy: session.user.id,
-        title: file.name.replace(/\.[^/.]+$/, ""), // Remove file extension
-        topic: "Imported from Slides",
-        gameType: "mcq",
-        timeStarted: new Date(),
-        questions: {
-          create: formattedQuestions.map((q: any) => ({
-            question: q.question,
-            options: q.choices,
-            answer: q.choices[q.correctAnswer],
-            questionType: "mcq",
-          })),
-        },
-      },
-    });
+    // Extract answer key
+    const answerKeyMatch = text.match(answerKeyPattern);
+    const answerKey = answerKeyMatch ? answerKeyMatch[1] : "";
 
-    return NextResponse.json({ quizId: quiz.id });
+    // Validate the extracted data
+    const quizData = {
+      title,
+      topic,
+      questions: questions.map((q, index) => ({
+        question: q.question,
+        answers: q.answers,
+        correctAnswer: answerKey
+      }))
+    };
+
+    const validatedData = userQuizSchema.parse(quizData);
+
+    return NextResponse.json(validatedData);
   } catch (error) {
-    console.error("Error parsing slides:", error);
+    console.error("Error parsing PPTX:", error);
     return NextResponse.json(
-      { error: "Failed to parse slides" },
+      { error: "Failed to parse PPTX file" },
       { status: 500 }
     );
   }

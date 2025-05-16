@@ -1,77 +1,87 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/nextauth";
-import { prisma } from "@/lib/db";
 import { userQuizSchema } from "@/schemas/form/quizSchema";
-import { strict_output } from "@/lib/cohere";
+import { z } from "zod";
+
+// Regex patterns for parsing
+const TITLE_PATTERN = /^([^\n]+)/;
+const TOPIC_PATTERN = /^[^\n]+\n([^\n]+)/;
+const QUESTION_PATTERN = /Câu\s+(\d+)\.\s*([^?]+\?)/g;
+const ANSWER_PATTERN = /([A-D])\.\s*([^\n]+)/g;
+const ANSWER_KEY_PATTERN = /(\d+):\s*([A-D])/g;
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const formData = await req.formData();
     const file = formData.get("file") as File;
     
     if (!file) {
-      return NextResponse.json({ error: "No file provided" }, { status: 400 });
+      return NextResponse.json(
+        { error: "No file provided" },
+        { status: 400 }
+      );
     }
 
-    // Convert file to text
+    // Read file content as text
     const text = await file.text();
+    const fullText = text;
+
+    // Parse title and topic
+    const titleMatch = fullText.match(TITLE_PATTERN);
+    const topicMatch = fullText.match(TOPIC_PATTERN);
     
-    // Use AI to generate questions from the text
-    const questions = await strict_output(
-      "You are a helpful AI that generates multiple-choice questions from text content. Each question must have one correct answer and three distinct incorrect options. The correct answer should only appear in the 'answer' field. Each field should contain a short sentence under 15 words. Return all questions in a JSON array.",
-      `Generate 5 multiple-choice questions from this text: ${text}`,
-      {
-        question: "question",
-        answer: "correct answer (under 15 words)",
-        options1: "incorrect answer (under 15 words, different from answer)",
-        options2: "incorrect answer (under 15 words, different from answer)",
-        options3: "incorrect answer (under 15 words, different from answer)",
+    const title = titleMatch ? titleMatch[1].trim() : "";
+    const topic = topicMatch ? topicMatch[1].trim() : "";
+
+    // Parse questions and answers
+    const questions: any[] = [];
+    let questionMatch;
+    const questionMatches = [...fullText.matchAll(QUESTION_PATTERN)];
+
+    for (const match of questionMatches) {
+      const questionNumber = parseInt(match[1]);
+      const questionText = match[2].trim();
+      
+      // Find answer options for this question
+      const answerSection = fullText.substring(
+        match.index!,
+        questionMatches[questionMatches.indexOf(match) + 1]?.index || fullText.length
+      );
+      
+      const answerMatches = [...answerSection.matchAll(ANSWER_PATTERN)];
+      const choices = answerMatches.map(m => m[2].trim());
+
+      questions.push({
+        question: questionText,
+        choices,
+        correctAnswer: 0, // Will be updated from answer key
+      });
+    }
+
+    // Parse answer key
+    const answerKeyMatches = [...fullText.matchAll(ANSWER_KEY_PATTERN)];
+    for (const match of answerKeyMatches) {
+      const questionNumber = parseInt(match[1]);
+      const correctAnswer = match[2].charCodeAt(0) - 65; // Convert A->0, B->1, etc.
+      
+      if (questions[questionNumber - 1]) {
+        questions[questionNumber - 1].correctAnswer = correctAnswer;
       }
-    );
+    }
 
-    // Format questions according to our schema
-    const formattedQuestions = questions.map((q: any) => ({
-      question: q.question,
-      choices: [q.answer, q.options1, q.options2, q.options3].sort(() => Math.random() - 0.5),
-      correctAnswer: 0, // Will be updated after sorting
-    }));
+    // Validate against schema
+    const quizData = {
+      title,
+      topic,
+      questions,
+    };
 
-    // Update correctAnswer index after sorting
-    formattedQuestions.forEach((q: any) => {
-      q.correctAnswer = q.choices.indexOf(q.choices.find((c: string) => c === q.answer));
-    });
+    const validatedData = userQuizSchema.parse(quizData);
 
-    // Create a temporary quiz in the database
-    const quiz = await prisma.game.create({
-      data: {
-        userId: session.user.id,
-        createdBy: session.user.id,
-        title: file.name.replace(/\.[^/.]+$/, ""), // Remove file extension
-        topic: "Imported from PDF",
-        gameType: "mcq",
-        timeStarted: new Date(),
-        questions: {
-          create: formattedQuestions.map((q: any) => ({
-            question: q.question,
-            options: q.choices,
-            answer: q.choices[q.correctAnswer],
-            questionType: "mcq",
-          })),
-        },
-      },
-    });
-
-    return NextResponse.json({ quizId: quiz.id });
+    return NextResponse.json(validatedData);
   } catch (error) {
     console.error("Error parsing PDF:", error);
     return NextResponse.json(
-      { error: "Failed to parse PDF" },
+      { error: "Failed to parse PDF file" },
       { status: 500 }
     );
   }

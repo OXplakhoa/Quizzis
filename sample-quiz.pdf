@@ -1,11 +1,28 @@
-Introduction to Web Development
+CÂU HỎI TRẮC NGHIỆM MÔN BẢO MẬT
 
-Web development is the work involved in developing a website for the Internet or an intranet. Web development can range from developing a simple single static page of plain text to complex web applications, electronic businesses, and social network services.
+Câu 1. An toàn máy tính là gì?
 
-HTML (HyperText Markup Language) is the standard markup language for documents designed to be displayed in a web browser. It can be assisted by technologies such as Cascading Style Sheets (CSS) and scripting languages such as JavaScript.
+A. Là tập hợp các công cụ thiết kế để bảo vệ dữ liệu và trống Hacker
+B. Là bảo vệ máy tính khỏi mất mát dữ liệu
+C. Là bảo vệ máy tính khỏi Virus
+D. Là những phần mềm trống Hacker
 
-CSS (Cascading Style Sheets) is a style sheet language used for describing the presentation of a document written in a markup language such as HTML. CSS is designed to enable the separation of presentation and content, including layout, colors, and fonts.
+Câu 2. Mục đích của bảo mật thông tin là gì?
 
-JavaScript is a programming language that enables interactive web pages. It is an essential part of web applications and can be used to create dynamic content, control multimedia, animate images, and much more.
+A. Bảo vệ thông tin khỏi truy cập trái phép
+B. Tăng tốc độ xử lý thông tin
+C. Giảm dung lượng lưu trữ
+D. Tăng khả năng chia sẻ thông tin
 
-React is a JavaScript library for building user interfaces. It is maintained by Facebook and a community of individual developers and companies. React can be used as a base in the development of single-page or mobile applications. 
+Câu 3. Phương pháp mã hóa nào được sử dụng phổ biến nhất?
+
+A. Mã hóa đối xứng
+B. Mã hóa bất đối xứng
+C. Mã hóa một chiều
+D. Mã hóa hai chiều
+
+ANSWER KEY:
+
+1: A
+2: A
+3: A 

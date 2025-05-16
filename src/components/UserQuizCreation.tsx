@@ -6,6 +6,7 @@ import { userQuizSchema } from "@/schemas/form/quizSchema";
 import { z } from "zod";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+import { toast } from "sonner";
 
 const defaultQuestion = () => ({
   question: "",
@@ -35,6 +36,7 @@ const UserQuizCreation: React.FC<Props> = ({ onSaved }) => {
   });
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const handleAddQuestion = () => {
     append(defaultQuestion());
@@ -61,11 +63,49 @@ const UserQuizCreation: React.FC<Props> = ({ onSaved }) => {
     }
   };
 
+  const handleFileUpload = async (file: File) => {
+    setIsUploading(true);
+    setError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const endpoint = file.name.toLowerCase().endsWith(".pdf")
+        ? "/api/quiz/parse-pdf"
+        : "/api/quiz/parse-pptx";
+
+      const res = await fetch(endpoint, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to parse file");
+      }
+
+      const data = await res.json();
+      
+      // Update form with parsed data
+      form.reset({
+        title: data.title,
+        topic: data.topic,
+        questions: data.questions,
+      });
+
+      toast.success("File parsed successfully");
+    } catch (e: any) {
+      setError(e.message || "Failed to parse file");
+      toast.error("Failed to parse file");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const onSubmit = async (data: UserQuizForm, playAfterSave = false) => {
     setIsSaving(true);
     setError(null);
     try {
-      // TODO: Replace with actual API call
       const res = await fetch("/api/quiz/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -74,7 +114,6 @@ const UserQuizCreation: React.FC<Props> = ({ onSaved }) => {
       if (!res.ok) throw new Error("Lưu quiz thất bại");
       const { quizId } = await res.json();
       if (onSaved) onSaved(quizId);
-      // TODO: Navigate to play page if playAfterSave is true
       if (playAfterSave) {
         window.location.href = `/play/mcq/${quizId}`;
       }
@@ -91,11 +130,23 @@ const UserQuizCreation: React.FC<Props> = ({ onSaved }) => {
       onSubmit={form.handleSubmit((data) => onSubmit(data, false))}
     >
       <div className="flex flex-col gap-4">
-        <Input
-          placeholder="Tiêu đề bài quiz"
-          {...form.register("title")}
-          className="text-lg font-semibold"
-        />
+        <div className="flex items-center gap-4">
+          <Input
+            placeholder="Tiêu đề bài quiz"
+            {...form.register("title")}
+            className="text-lg font-semibold"
+          />
+          <Input
+            type="file"
+            accept=".txt"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleFileUpload(file);
+            }}
+            className="max-w-[200px]"
+            disabled={isUploading}
+          />
+        </div>
         <Input
           placeholder="Chủ đề bài quiz"
           {...form.register("topic")}
@@ -165,13 +216,13 @@ const UserQuizCreation: React.FC<Props> = ({ onSaved }) => {
       </div>
       {error && <div className="text-red-500 text-center">{error}</div>}
       <div className="flex gap-4 justify-center">
-        <Button type="submit" disabled={isSaving}>
+        <Button type="submit" disabled={isSaving || isUploading}>
           {isSaving ? "Đang lưu..." : "Lưu"}
         </Button>
         <Button
           type="button"
           variant="default"
-          disabled={isSaving}
+          disabled={isSaving || isUploading}
           onClick={form.handleSubmit((data) => onSubmit(data, true))}
         >
           {isSaving ? "Đang lưu..." : "Lưu & Chơi ngay"}
