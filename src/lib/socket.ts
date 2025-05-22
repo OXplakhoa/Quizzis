@@ -1,19 +1,17 @@
 import { Server as NetServer } from "http";
 import { Server as SocketIOServer } from "socket.io";
-import { NextApiResponse } from "next";
+import { NextResponse } from "next/server";
 
-export type NextApiResponseWithSocket = NextApiResponse & {
-  socket: {
-    server: NetServer & {
-      io?: SocketIOServer;
-    };
-  };
-};
+let io: SocketIOServer | null = null;
 
-export const initSocket = (res: NextApiResponseWithSocket) => {
-  if (!res.socket.server.io) {
-    const io = new SocketIOServer(res.socket.server);
-    res.socket.server.io = io;
+export const initSocket = () => {
+  if (!io) {
+    io = new SocketIOServer({
+      cors: {
+        origin: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+        methods: ["GET", "POST"],
+      },
+    });
 
     io.on("connection", (socket) => {
       console.log("Client connected:", socket.id);
@@ -36,5 +34,5 @@ export const initSocket = (res: NextApiResponseWithSocket) => {
       });
     });
   }
-  return res.socket.server.io;
+  return io;
 }; 

@@ -63,7 +63,7 @@ model Game {
   gameType    GameType
   user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   questions   Question[]
-  title       String     // Title for user-created quizzes
+  title       String?     // Title for user-created quizzes
   createdBy   String?    // User ID of the creator
   creator     User?      @relation("CreatedGames", fields: [createdBy], references: [id])
 

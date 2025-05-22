@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
-import { BrainCircuit, ArrowLeft, FileText, Presentation, Upload } from "lucide-react";
+import { BrainCircuit, ArrowLeft, FileText, Presentation, Upload, MoveRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import FileUpload from "../FileUpload";
 import axios from "axios";
@@ -118,8 +118,8 @@ const QuizMeCard = (props: Props) => {
                       <Upload size={20} />
                     </div>
                     <div className="text-left">
-                      <div className="font-medium">Import Content</div>
-                      <span className="text-xs text-gray-600">Import from PDF or slides</span>
+                      <div className="font-medium">Import Nội Dung</div>
+                      <span className="text-xs text-gray-600">Import từ PDF hoặc slides</span>
                     </div>
                   </button>
                   
@@ -135,7 +135,7 @@ const QuizMeCard = (props: Props) => {
                     </div>
                     <div className="text-left z-10">
                       <div className="font-medium">Quizzis Generator</div>
-                      <span className="text-xs text-gray-600">AI assisted</span>
+                      <span className="text-xs text-gray-600">AI hỗ trợ</span>
                     </div>
                     {animatingOption === 'generator' && (
                       <div className="absolute inset-0 bg-purple-400 bg-opacity-30 animate-pulse-wave"></div>
@@ -155,8 +155,8 @@ const QuizMeCard = (props: Props) => {
                       </svg>
                     </div>
                     <div className="text-left z-10">
-                      <div className="font-medium">Blank Canvas</div>
-                      <span className="text-xs text-gray-600">Create from scratch</span>
+                      <div className="font-medium">Trang trống mới</div>
+                      <span className="text-xs text-gray-600">Tự tạo nội dung cho riêng mình</span>
                     </div>
                     {animatingOption === 'blank' && (
                       <div className="absolute inset-0 bg-green-400 bg-opacity-30 animate-pulse-wave"></div>
@@ -175,7 +175,7 @@ const QuizMeCard = (props: Props) => {
                   >
                     <ArrowLeft size={20} />
                   </button>
-                  <h2 className="text-xl font-bold">Import Options</h2>
+                  <h2 className="text-xl font-bold">Tùy Chọn Import</h2>
                 </div>
                 
                 <div className="grid grid-cols-1 gap-4 mb-4">
@@ -190,8 +190,8 @@ const QuizMeCard = (props: Props) => {
                       <FileText size={20} />
                     </div>
                     <div className="text-left z-10">
-                      <div className="font-medium">PDF to Quizzis</div>
-                      <span className="text-xs text-gray-600">Extract content from PDF</span>
+                      <div className="font-medium">PDF với Quizzis</div>
+                      <span className="text-xs text-gray-600">Trích xuất nội dung từ PDF</span>
                     </div>
                     {animatingOption === 'pdf' && (
                       <div className="absolute inset-0 bg-red-400 bg-opacity-30 animate-pulse-wave"></div>
@@ -210,7 +210,7 @@ const QuizMeCard = (props: Props) => {
                     </div>
                     <div className="text-left z-10">
                       <div className="font-medium">Import Slides</div>
-                      <span className="text-xs text-gray-600">Upload your slides</span>
+                      <span className="text-xs text-gray-600">Tải lên cái slides của bạn</span>
                     </div>
                     {animatingOption === 'slides' && (
                       <div className="absolute inset-0 bg-orange-400 bg-opacity-30 animate-pulse-wave"></div>

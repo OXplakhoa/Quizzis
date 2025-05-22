@@ -3,8 +3,7 @@ import { initSocket } from "@/lib/socket";
 
 export async function GET(req: Request) {
   try {
-    const res = new NextResponse();
-    await initSocket(res as any);
+    const io = initSocket();
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Socket initialization error:", error);

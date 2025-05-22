@@ -41,7 +41,7 @@ const Navbar = async (props: Props) => {
               <UserAccountNav user={session.user} />
             ) : (
               //Add TypeWritter effect here
-              <SignInButton text="Sign In" />
+              <SignInButton text="Đăng nhập" />
             )}
           </div>
         </div>

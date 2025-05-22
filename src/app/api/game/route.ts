@@ -19,88 +19,90 @@ export const POST = async (req: Request, res: Response) => {
         }
       );
     }
+
     const body = await req.json();
+    console.log("Received request body:", body);
+
     const { amount, topic, type } = quizSchema.parse(body);
+    console.log("Parsed request:", { amount, topic, type });
+
+    // Create game first
     const game = await prisma.game.create({
       data: {
         gameType: type,
         timeStarted: new Date(),
         userId: session.user.id,
         topic,
-        title: topic,
       },
     });
-    const questions = await generateQuestions(amount, topic, type);
-    await prisma.topicCount.upsert({
-      where: {
-        topic,
-      },
-      create: {
-        topic,
-        count: 1,
-      },
-      update: {
-        count: {
-          increment: 1,
-        },
-      },
-    });
-    if (type === "mcq") {
-      type mcqQuestion = {
-        question: string;
-        answer: string;
-        options1: string;
-        options2: string;
-        options3: string;
-      };
-      let manyData = questions.map((question: mcqQuestion) => {
-        let options = [
-          question.answer,
-          question.options1,
-          question.options2,
-          question.options3,
-        ];
-        options = options.sort(() => Math.random() - 0.5);
-        return {
-          question: question.question,
-          answer: question.answer,
-          options: JSON.stringify(options),
-          gameId: game.id,
-          questionType: "mcq",
-        };
+    console.log("Created game:", game.id);
+
+    try {
+      // Generate questions
+      const questions = await generateQuestions(amount, topic, type);
+      console.log("Generated questions:", questions.length);
+
+      // Update topic count
+      await prisma.topicCount.upsert({
+        where: { topic },
+        create: { topic, count: 1 },
+        update: { count: { increment: 1 } },
       });
-      await prisma.question.createMany({
-        data: manyData,
-      });
-    } else if (type === "open_ended") {
-      type OpenQuestion = {
-        question: string;
-        answer: string;
-      };
-      let manyData = questions.map((question: OpenQuestion) => {
-        return {
+
+      // Create questions based on type
+      if (type === "mcq") {
+        const manyData = questions.map((question: any) => {
+          const options = [
+            question.answer,
+            question.options1,
+            question.options2,
+            question.options3,
+          ].sort(() => Math.random() - 0.5);
+
+          return {
+            question: question.question,
+            answer: question.answer,
+            options: JSON.stringify(options),
+            gameId: game.id,
+            questionType: "mcq" as const,
+          };
+        });
+
+        await prisma.question.createMany({ data: manyData });
+      } else if (type === "open_ended") {
+        const manyData = questions.map((question: any) => ({
           question: question.question,
           answer: question.answer,
           gameId: game.id,
-          questionType: "open_ended",
-        };
-      });
-      await prisma.question.createMany({
-        data: manyData,
-      });
+          questionType: "open_ended" as const,
+        }));
+
+        await prisma.question.createMany({ data: manyData });
+      }
+
+      return NextResponse.json({ gameId: game.id });
+    } catch (error) {
+      // If question generation fails, delete the game
+      await prisma.game.delete({ where: { id: game.id } });
+      throw error;
     }
-    return NextResponse.json({
-      gameId: game.id,
-    });
   } catch (error) {
+    console.error("Game creation error:", error);
+
     if (error instanceof ZodError) {
       return NextResponse.json(
-        {
-          error: error.issues,
-        },
+        { error: error.issues },
         { status: 400 }
       );
     }
+
+    if (error instanceof Error) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(
       { error: "Something went wrong" },
       { status: 500 }
