@@ -41,6 +41,7 @@ export const POST = async (req: Request, res: Response) => {
       return NextResponse.json(
         {
           isCorrect,
+          score: isCorrect ? 1 : 0,
         },
         {
           status: 200,
@@ -61,7 +62,7 @@ export const POST = async (req: Request, res: Response) => {
       return NextResponse.json(
         {
           isCorrect,
-          score,
+          score: score / 10, // Convert to 0-1 scale
           explanation,
         },
         {
@@ -69,6 +70,15 @@ export const POST = async (req: Request, res: Response) => {
         }
       );
     }
+
+    return NextResponse.json(
+      {
+        error: "Invalid question type",
+      },
+      {
+        status: 400,
+      }
+    );
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

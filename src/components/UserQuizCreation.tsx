@@ -8,12 +8,41 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { toast } from "sonner";
 import { Plus, Trash2, Save, Play } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "./ui/label";
+import { Textarea } from "./ui/textarea";
 
-const defaultQuestion = () => ({
-  question: "",
-  choices: ["", ""],
-  correctAnswer: 0,
-});
+type MCQQuestion = {
+  question: string;
+  type: "mcq";
+  choices: string[];
+  correctAnswer: number;
+};
+
+type OpenEndedQuestion = {
+  question: string;
+  type: "open_ended";
+  answer: string;
+};
+
+type Question = MCQQuestion | OpenEndedQuestion;
+
+const defaultQuestion = (type: "mcq" | "open_ended"): Question => {
+  if (type === "mcq") {
+    return {
+      question: "",
+      type: "mcq",
+      choices: ["", ""],
+      correctAnswer: 0,
+    };
+  } else {
+    return {
+      question: "",
+      type: "open_ended",
+      answer: "",
+    };
+  }
+};
 
 type UserQuizForm = z.infer<typeof userQuizSchema>;
 
@@ -22,12 +51,17 @@ type Props = {
 };
 
 const UserQuizCreation: React.FC<Props> = ({ onSaved }) => {
+  const [questionType, setQuestionType] = useState<"mcq" | "open_ended">("mcq");
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
   const form = useForm<UserQuizForm>({
     resolver: zodResolver(userQuizSchema),
     defaultValues: {
       title: "",
       topic: "",
-      questions: [defaultQuestion()],
+      questions: [defaultQuestion("mcq")],
     },
     mode: "onChange",
   });
@@ -35,12 +69,9 @@ const UserQuizCreation: React.FC<Props> = ({ onSaved }) => {
     control: form.control,
     name: "questions",
   });
-  const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
 
   const handleAddQuestion = () => {
-    append(defaultQuestion());
+    append(defaultQuestion(questionType));
   };
 
   const handleRemoveQuestion = (idx: number) => {
@@ -48,20 +79,27 @@ const UserQuizCreation: React.FC<Props> = ({ onSaved }) => {
   };
 
   const handleAddChoice = (qIdx: number) => {
-    const q = form.getValues(`questions.${qIdx}`);
-    if (q.choices.length < 4) {
+    const q = form.getValues(`questions.${qIdx}`) as MCQQuestion;
+    if (q.type === "mcq" && q.choices.length < 4) {
       update(qIdx, { ...q, choices: [...q.choices, ""] });
     }
   };
 
   const handleRemoveChoice = (qIdx: number, cIdx: number) => {
-    const q = form.getValues(`questions.${qIdx}`);
-    if (q.choices.length > 2) {
+    const q = form.getValues(`questions.${qIdx}`) as MCQQuestion;
+    if (q.type === "mcq" && q.choices.length > 2) {
       const newChoices = q.choices.filter((_, i) => i !== cIdx);
       let correctAnswer = q.correctAnswer;
       if (correctAnswer >= newChoices.length) correctAnswer = 0;
       update(qIdx, { ...q, choices: newChoices, correctAnswer });
     }
+  };
+
+  const handleQuestionTypeChange = (type: "mcq" | "open_ended") => {
+    setQuestionType(type);
+    // Reset all questions to the new type
+    const newQuestions = fields.map(() => defaultQuestion(type));
+    form.setValue("questions", newQuestions);
   };
 
   const handleFileUpload = async (file: File) => {
@@ -116,7 +154,9 @@ const UserQuizCreation: React.FC<Props> = ({ onSaved }) => {
       const { quizId } = await res.json();
       if (onSaved) onSaved(quizId);
       if (playAfterSave) {
-        window.location.href = `/play/mcq/${quizId}`;
+        // Redirect to the appropriate game type page
+        const gameType = data.questions[0].type === "open_ended" ? "open-ended" : "mcq";
+        window.location.href = `/play/${gameType}/${quizId}`;
       }
       toast.success("Quiz đã được lưu thành công!");
     } catch (e: any) {
@@ -134,7 +174,7 @@ const UserQuizCreation: React.FC<Props> = ({ onSaved }) => {
         onSubmit={form.handleSubmit((data) => onSubmit(data, false))}
       >
         <h2 className="text-2xl font-bold text-center mb-6 text-gray-900 dark:text-white opacity-80">
-          Tạo bài quiz trắc nghiệm của riêng bạn
+          Tạo bài quiz của riêng bạn
         </h2>
         <div className="flex flex-col gap-4">
           <Input
@@ -147,6 +187,24 @@ const UserQuizCreation: React.FC<Props> = ({ onSaved }) => {
             {...form.register("topic")}
             className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700"
           />
+          
+          <div className="flex items-center space-x-4">
+            <Label>Loại câu hỏi:</Label>
+            <RadioGroup
+              value={questionType}
+              onValueChange={(value: string) => handleQuestionTypeChange(value as "mcq" | "open_ended")}
+              className="flex space-x-4"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="mcq" id="mcq" />
+                <Label htmlFor="mcq">Trắc nghiệm</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="open_ended" id="open_ended" />
+                <Label htmlFor="open_ended">Tự luận</Label>
+              </div>
+            </RadioGroup>
+          </div>
         </div>
         <div className="space-y-8">
           {fields.map((field, qIdx) => (
@@ -175,47 +233,59 @@ const UserQuizCreation: React.FC<Props> = ({ onSaved }) => {
                 {...form.register(`questions.${qIdx}.question` as const)}
                 className="mb-4 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700"
               />
-              <div className="space-y-3">
-                {form.watch(`questions.${qIdx}.choices`).map((choice, cIdx) => (
-                  <div key={cIdx} className="flex items-center gap-3">
-                    <input
-                      type="radio"
-                      name={`correct-${qIdx}`}
-                      checked={form.watch(`questions.${qIdx}.correctAnswer`) === cIdx}
-                      onChange={() => form.setValue(`questions.${qIdx}.correctAnswer`, cIdx)}
-                      className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                    />
-                    <Input
-                      placeholder={`Lựa chọn ${cIdx + 1}`}
-                      {...form.register(`questions.${qIdx}.choices.${cIdx}` as const)}
-                      className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700"
-                    />
-                    {form.watch(`questions.${qIdx}.choices`).length > 2 && (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleRemoveChoice(qIdx, cIdx)}
-                        className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
-                {form.watch(`questions.${qIdx}.choices`).length < 4 && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => handleAddChoice(qIdx)}
-                    className="gap-2"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Thêm lựa chọn
-                  </Button>
-                )}
-              </div>
+              
+              {questionType === "mcq" ? (
+                <div className="space-y-3">
+                  {form.watch(`questions.${qIdx}.choices`).map((choice, cIdx) => (
+                    <div key={cIdx} className="flex items-center gap-3">
+                      <input
+                        type="radio"
+                        name={`correct-${qIdx}`}
+                        checked={form.watch(`questions.${qIdx}.correctAnswer`) === cIdx}
+                        onChange={() => form.setValue(`questions.${qIdx}.correctAnswer`, cIdx)}
+                        className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                      />
+                      <Input
+                        placeholder={`Lựa chọn ${cIdx + 1}`}
+                        {...form.register(`questions.${qIdx}.choices.${cIdx}` as const)}
+                        className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700"
+                      />
+                      {form.watch(`questions.${qIdx}.choices`).length > 2 && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleRemoveChoice(qIdx, cIdx)}
+                          className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                  {form.watch(`questions.${qIdx}.choices`).length < 4 && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => handleAddChoice(qIdx)}
+                      className="gap-2"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Thêm lựa chọn
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <Label>Đáp án đúng:</Label>
+                  <Textarea
+                    placeholder="Nhập đáp án đúng..."
+                    {...form.register(`questions.${qIdx}.answer` as const)}
+                    className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700"
+                  />
+                </div>
+              )}
             </div>
           ))}
           <Button 
@@ -258,4 +328,4 @@ const UserQuizCreation: React.FC<Props> = ({ onSaved }) => {
   );
 };
 
-export default UserQuizCreation; 
+export default UserQuizCreation;
