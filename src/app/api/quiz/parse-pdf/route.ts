@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { userQuizSchema } from "@/schemas/form/quizSchema";
-import pdfParse from "pdf-parse";
 
 // Improved regex patterns for parsing
 const TITLE_PATTERN = /^([^\n]+)/;
@@ -8,6 +7,38 @@ const TOPIC_PATTERN = /^[^\n]+\n([^\n]+)/;
 const QUESTION_PATTERN = /(?:Câu\s+)?(\d+)\.\s*([^?]+\?)/g;
 const ANSWER_PATTERN = /([A-D])\.\s*([^\n]+)/g;
 const ANSWER_KEY_PATTERN = /(?:ANSWER KEY|ĐÁP ÁN):\s*\n((?:\d+:\s*[A-D]\n?)+)/i;
+
+// Simple text extraction from PDF-like content
+async function extractTextFromFile(file: File): Promise<string> {
+  try {
+    // First try to read as text (works for some PDFs and text files)
+    const text = await file.text();
+    
+    // If it looks like readable text, return it
+    if (text.length > 100 && text.includes('.')) {
+      return text;
+    }
+    
+    // If not readable text, try to extract from buffer
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    
+    // Simple text extraction from buffer
+    let extractedText = '';
+    for (let i = 0; i < buffer.length; i++) {
+      const byte = buffer[i];
+      // Only include printable ASCII characters and common UTF-8 characters
+      if ((byte >= 32 && byte <= 126) || byte === 10 || byte === 13 || byte === 9) {
+        extractedText += String.fromCharCode(byte);
+      }
+    }
+    
+    return extractedText;
+  } catch (error) {
+    console.error('Text extraction failed:', error);
+    throw new Error('Unable to extract text from file');
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -21,15 +52,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Convert file to buffer for pdf-parse
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
-    // Parse PDF using pdf-parse library
-    const pdfData = await pdfParse(buffer);
-    const fullText = pdfData.text;
-
-    console.log("Extracted PDF text:", fullText); // For debugging
+    // Extract text from file using our simple method
+    const fullText = await extractTextFromFile(file);
+    
+    console.log("Extracted text length:", fullText.length); // For debugging
 
     // Parse title and topic
     const titleMatch = fullText.match(TITLE_PATTERN);
@@ -127,7 +153,7 @@ export async function POST(req: NextRequest) {
       questions,
     };
 
-    console.log("Parsed quiz data:", quizData); // For debugging
+    console.log("Parsed quiz data:", { title, topic, questionCount: questions.length }); // For debugging
 
     const validatedData = userQuizSchema.parse(quizData);
 

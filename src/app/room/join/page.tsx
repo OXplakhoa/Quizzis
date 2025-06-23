@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import JoinRoomForm from "@/components/JoinRoomForm";
 
 export default function JoinRoomPage() {
@@ -12,7 +13,9 @@ export default function JoinRoomPage() {
             Nhập mã phòng và tên của bạn để bắt đầu
           </p>
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-            <JoinRoomForm />
+            <Suspense fallback={<div>Loading...</div>}>
+              <JoinRoomForm />
+            </Suspense>
           </div>
         </div>
       </div>
