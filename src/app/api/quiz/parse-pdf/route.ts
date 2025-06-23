@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { userQuizSchema } from "@/schemas/form/quizSchema";
-import { z } from "zod";
+import pdfParse from "pdf-parse";
 
-// Regex patterns for parsing
+// Improved regex patterns for parsing
 const TITLE_PATTERN = /^([^\n]+)/;
 const TOPIC_PATTERN = /^[^\n]+\n([^\n]+)/;
-const QUESTION_PATTERN = /Câu\s+(\d+)\.\s*([^?]+\?)/g;
+const QUESTION_PATTERN = /(?:Câu\s+)?(\d+)\.\s*([^?]+\?)/g;
 const ANSWER_PATTERN = /([A-D])\.\s*([^\n]+)/g;
-const ANSWER_KEY_PATTERN = /(\d+):\s*([A-D])/g;
+const ANSWER_KEY_PATTERN = /(?:ANSWER KEY|ĐÁP ÁN):\s*\n((?:\d+:\s*[A-D]\n?)+)/i;
 
 export async function POST(req: NextRequest) {
   try {
@@ -21,50 +21,102 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Read file content as text
-    const text = await file.text();
-    const fullText = text;
+    // Convert file to buffer for pdf-parse
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // Parse PDF using pdf-parse library
+    const pdfData = await pdfParse(buffer);
+    const fullText = pdfData.text;
+
+    console.log("Extracted PDF text:", fullText); // For debugging
 
     // Parse title and topic
     const titleMatch = fullText.match(TITLE_PATTERN);
     const topicMatch = fullText.match(TOPIC_PATTERN);
     
-    const title = titleMatch ? titleMatch[1].trim() : "";
-    const topic = topicMatch ? topicMatch[1].trim() : "";
+    const title = titleMatch ? titleMatch[1].trim() : "Untitled Quiz";
+    const topic = topicMatch ? topicMatch[1].trim() : "General";
 
     // Parse questions and answers
     const questions: any[] = [];
-    let questionMatch;
     const questionMatches = [...fullText.matchAll(QUESTION_PATTERN)];
 
-    for (const match of questionMatches) {
+    for (let i = 0; i < questionMatches.length; i++) {
+      const match = questionMatches[i];
       const questionNumber = parseInt(match[1]);
       const questionText = match[2].trim();
       
-      // Find answer options for this question
-      const answerSection = fullText.substring(
-        match.index!,
-        questionMatches[questionMatches.indexOf(match) + 1]?.index || fullText.length
-      );
+      // Find the section between this question and the next question (or end of text)
+      const startIndex = match.index!;
+      const endIndex = questionMatches[i + 1]?.index || fullText.length;
+      const questionSection = fullText.substring(startIndex, endIndex);
       
-      const answerMatches = [...answerSection.matchAll(ANSWER_PATTERN)];
-      const choices = answerMatches.map(m => m[2].trim());
+      // Extract answer choices for this question
+      const answerMatches = [...questionSection.matchAll(ANSWER_PATTERN)];
+      const choices = answerMatches.map(m => m[2].trim()).filter(choice => choice.length > 0);
 
-      questions.push({
-        question: questionText,
-        choices,
-        correctAnswer: 0, // Will be updated from answer key
-      });
+      // Ensure we have at least 2 choices
+      if (choices.length >= 2) {
+        questions.push({
+          question: questionText,
+          type: "mcq",
+          choices,
+          correctAnswer: 0, // Will be updated from answer key
+        });
+      }
     }
 
     // Parse answer key
-    const answerKeyMatches = [...fullText.matchAll(ANSWER_KEY_PATTERN)];
-    for (const match of answerKeyMatches) {
-      const questionNumber = parseInt(match[1]);
-      const correctAnswer = match[2].charCodeAt(0) - 65; // Convert A->0, B->1, etc.
+    const answerKeyMatch = fullText.match(ANSWER_KEY_PATTERN);
+    if (answerKeyMatch) {
+      const answerKeyText = answerKeyMatch[1];
+      const answerKeyLines = answerKeyText.split('\n').filter(line => line.trim());
       
-      if (questions[questionNumber - 1]) {
-        questions[questionNumber - 1].correctAnswer = correctAnswer;
+      for (const line of answerKeyLines) {
+        const keyMatch = line.match(/(\d+):\s*([A-D])/);
+        if (keyMatch) {
+          const questionNumber = parseInt(keyMatch[1]);
+          const correctAnswer = keyMatch[2].charCodeAt(0) - 65; // Convert A->0, B->1, etc.
+          
+          if (questions[questionNumber - 1]) {
+            questions[questionNumber - 1].correctAnswer = correctAnswer;
+          }
+        }
+      }
+    }
+
+    // If no questions were parsed, try alternative parsing
+    if (questions.length === 0) {
+      // Fallback: try to extract any text that looks like questions
+      const lines = fullText.split('\n').filter(line => line.trim());
+      let currentQuestion: any = null;
+      
+      for (const line of lines) {
+        // Look for question patterns
+        const questionMatch = line.match(/(?:Câu\s+)?(\d+)\.\s*(.+)/);
+        if (questionMatch) {
+          if (currentQuestion && currentQuestion.choices.length >= 2) {
+            questions.push(currentQuestion);
+          }
+          currentQuestion = {
+            question: questionMatch[2].trim(),
+            type: "mcq",
+            choices: [],
+            correctAnswer: 0,
+          };
+        } else if (currentQuestion) {
+          // Look for answer choices
+          const answerMatch = line.match(/^([A-D])\.\s*(.+)/);
+          if (answerMatch) {
+            currentQuestion.choices.push(answerMatch[2].trim());
+          }
+        }
+      }
+      
+      // Add the last question if it has enough choices
+      if (currentQuestion && currentQuestion.choices.length >= 2) {
+        questions.push(currentQuestion);
       }
     }
 
@@ -75,13 +127,15 @@ export async function POST(req: NextRequest) {
       questions,
     };
 
+    console.log("Parsed quiz data:", quizData); // For debugging
+
     const validatedData = userQuizSchema.parse(quizData);
 
     return NextResponse.json(validatedData);
   } catch (error) {
     console.error("Error parsing PDF:", error);
     return NextResponse.json(
-      { error: "Failed to parse PDF file" },
+      { error: "Failed to parse PDF file. Please ensure the PDF contains properly formatted questions and answers." },
       { status: 500 }
     );
   }
