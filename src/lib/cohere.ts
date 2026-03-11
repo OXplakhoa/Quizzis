@@ -31,7 +31,7 @@ Only return the JSON array without explanation.
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "command-r-plus",
+        model: "command-a-03-2025",
         message: fullPrompt,
         temperature: 0.7,
         max_tokens: 1000,
